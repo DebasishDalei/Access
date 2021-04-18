@@ -9,6 +9,7 @@ import mysql.connector
 import sys
 import qrcode
 import random
+from datetime import datetime
 
 db = mysql.connector.connect(host="localhost", user="root", passwd="",database="OpenCV")
 cursor = db.cursor()
@@ -99,11 +100,16 @@ class Ui_MainWindow(QWidget):
         self.label_4.setText("Employee ID")
         self.tabs.setTabText(self.tabs.indexOf(self.reg),"Register")
 
+        #generation module
         self.generate_button.clicked.connect(self.generate)
         self.eid=None
         self.code=None
         self.save_button.clicked.connect(self.save)
         self.img=None
+
+        #registration module
+        self.sign_button.clicked.connect(self.sign)
+        
 
     def generate(self):
         self.eid=self.eid_textbox.text()
@@ -117,7 +123,7 @@ class Ui_MainWindow(QWidget):
         cursor.execute("select security_code from employee")
         result=cursor.fetchall()
         while True:
-            self.code=random.randrange(1111111111,9999999999)
+            self.code=random.randrange(111111111,999999999)
             if self.code not in result[0]:
                 break 
         cursor.execute("update employee set security_code=%s where eid=%s",(self.code,self.eid))
@@ -134,6 +140,55 @@ class Ui_MainWindow(QWidget):
         #save to device
         self.img.save(self.eid+".jpg")
         self.label_5.setText("QRCode saved")
+    
+    
+    def sign(self):
+        self.video=cv2.VideoCapture(0)
+        self.qr=cv2.QRCodeDetector()
+        self.security_code=""
+        while True:    
+            check,img=self.video.read()
+            cv2.imshow("Face",img)
+            self.security_code,points,straight_qrcode=self.qr.detectAndDecode(img)
+            if self.security_code!="":
+                r=self.check_valid_employee()
+                if r==True:
+                    break
+            key=cv2.waitKey(1)
+            if key==ord('x'):
+                break
+        self.video.release()
+        #register entry/exit        
+        self.register()
+        cv2.destroyAllWindows()
+
+    def check_valid_employee(self):
+        cursor.execute("select * from employee where security_code=%s",(self.security_code,))
+        result=cursor.fetchall()
+        if len(result)==0:
+            return False
+        cursor.execute("select * from register where eid=%s",(result[0][0],))
+        result=cursor.fetchall()
+        if len(result)>=2:
+            return False
+        return True
+
+    def register(self):
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        cursor.execute("select eid,name from employee where security_code=%s",(self.security_code,))
+        result=cursor.fetchall()
+        emp_id=result[0][0]
+        emp_name=result[0][1]
+        cursor.execute("select * from register where eid=%s",(emp_id,))
+        result=cursor.fetchall()
+        if len(result)==0:
+            cursor.execute("insert into register values(%s,%s,%s,%s)",(emp_name,current_time,0,emp_id))
+            db.commit()
+        else:
+            cursor.execute("insert into register values(%s,%s,%s,%s)",(emp_name,current_time,1,emp_id))
+            db.commit()
+
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
