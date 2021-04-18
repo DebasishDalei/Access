@@ -1,140 +1,139 @@
+from random import random
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QWidget,QApplication
 from PyQt5.QtCore import QObject
 from PyQt5.QtGui import QPixmap
 import cv2
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import numpy as np
+import mysql.connector
 import sys
+import qrcode
+import random
 
-
-class VideoThread(QThread):
-    change_pixmap_signal = pyqtSignal(np.ndarray)
-    
-    def run(self):
-        self._run_flag = True
-        cap = cv2.VideoCapture(0)
-        while self._run_flag:
-            ret, cv_img = cap.read()
-            if ret:
-                self.change_pixmap_signal.emit(cv_img)
-        cap.release()
-        print("A")
-
-    def stop(self):
-        self._run_flag = False
-        self.wait()
-        print("B")
+db = mysql.connector.connect(host="localhost", user="root", passwd="",database="OpenCV")
+cursor = db.cursor()
 
 class Ui_MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.resize(1500, 850)
-        self.setStyleSheet("background-color:rgb(170, 170, 255)")
-
-        self.thread = VideoThread()
-        self.thread.change_pixmap_signal.connect(self.update_image)
-        
-        self.label = QtWidgets.QLabel(self)
-        self.label.setGeometry(QtCore.QRect(10, 10, 121, 101))
-        self.label.setText("LOGO")
+        self.resize(994, 620)
+        self.tabs = QtWidgets.QTabWidget(self)
+        self.tabs.setGeometry(QtCore.QRect(0, 0, 981, 611))
+        self.tabs.setObjectName("tabs")
+        self.recent = QtWidgets.QWidget()
+        self.recent.setObjectName("recent")
+        self.horizontalLayoutWidget = QtWidgets.QWidget(self.recent)
+        self.horizontalLayoutWidget.setGeometry(QtCore.QRect(10, 0, 581, 41))
+        self.horizontalLayoutWidget.setObjectName("horizontalLayoutWidget")
+        self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.label_3 = QtWidgets.QLabel(self.horizontalLayoutWidget)
         font = QtGui.QFont()
-        font.setPointSize(18)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label.setFont(font)
-        self.label.setAlignment(QtCore.Qt.AlignCenter)
-        self.label.setObjectName("label")
-        
-        self.label_2 = QtWidgets.QLabel(self)
-        self.label_2.setGeometry(QtCore.QRect(160, 10, 811, 101))
-        self.label_2.setText("AUTOMATED SERVELENCE")
-        font = QtGui.QFont()
-        font.setPointSize(35)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_2.setFont(font)
+        font.setPointSize(8)
+        font.setBold(False)
+        font.setWeight(50)
+        self.label_3.setFont(font)
+        self.label_3.setFrameShadow(QtWidgets.QFrame.Plain)
+        self.label_3.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_3.setObjectName("label_3")
+        self.horizontalLayout.addWidget(self.label_3)
+        self.label_2 = QtWidgets.QLabel(self.horizontalLayoutWidget)
         self.label_2.setAlignment(QtCore.Qt.AlignCenter)
         self.label_2.setObjectName("label_2")
-
-        self.display = QtWidgets.QLabel(self)
-        self.display.setGeometry(QtCore.QRect(340,200,800,640))
-        self.display.setText("")
-        self.display.setObjectName("display")
-        
-        self.recent = QtWidgets.QListView(self)
-        self.recent.setGeometry(QtCore.QRect(1150, 250, 330, 550))
-        self.recent.setObjectName("recent")
-        
-        self.label_4 = QtWidgets.QLabel(self)
-        self.label_4.setGeometry(QtCore.QRect(1150, 200, 330, 40))
-        self.label_4.setText("RECENT ENTRIES")
+        self.horizontalLayout.addWidget(self.label_2)
+        self.label = QtWidgets.QLabel(self.horizontalLayoutWidget)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        self.label.setObjectName("label")
+        self.horizontalLayout.addWidget(self.label)
+        self.sign_button = QtWidgets.QPushButton(self.recent)
+        self.sign_button.setGeometry(QtCore.QRect(670, 160, 241, 181))
         font = QtGui.QFont()
+        font.setFamily("Bahnschrift Light")
+        font.setPointSize(20)
+        self.sign_button.setFont(font)
+        self.sign_button.setAutoFillBackground(False)
+        self.sign_button.setStyleSheet("background-color:rgb(238, 238, 238)")
+        self.sign_button.setCheckable(False)
+        self.sign_button.setObjectName("sign_button")
+        self.recent_list = QtWidgets.QListWidget(self.recent)
+        self.recent_list.setGeometry(QtCore.QRect(10, 50, 581, 531))
+        self.recent_list.setObjectName("recent_list")
+        self.tabs.addTab(self.recent, "")
+        self.reg = QtWidgets.QWidget()
+        self.reg.setObjectName("reg")
+        self.save_button = QtWidgets.QPushButton(self.reg)
+        self.save_button.setGeometry(QtCore.QRect(420, 330, 121, 31))
+        self.save_button.setObjectName("save_button")
+        self.generate_button = QtWidgets.QPushButton(self.reg)
+        self.generate_button.setGeometry(QtCore.QRect(360, 250, 251, 31))
+        self.generate_button.setObjectName("generate_button")
+        self.label_4 = QtWidgets.QLabel(self.reg)
+        self.label_4.setGeometry(QtCore.QRect(280, 80, 389, 108))
+        font = QtGui.QFont()
+        font.setFamily("Calibri")
         font.setPointSize(13)
-        font.setBold(True)
-        font.setWeight(75)
+        font.setBold(False)
+        font.setWeight(50)
         self.label_4.setFont(font)
         self.label_4.setAlignment(QtCore.Qt.AlignCenter)
         self.label_4.setObjectName("label_4")
-        
-        self.get_in = QtWidgets.QPushButton(self)
-        self.get_in.setGeometry(QtCore.QRect(20, 200, 300, 200))
-        font = QtGui.QFont()
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.get_in.setFont(font)
-        self.get_in.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.get_in.setStyleSheet("background-color:rgb(0, 136, 0)")
-        self.get_in.setText("IN")
-        self.get_in.setObjectName("get_in")
-        self.get_in.clicked.connect(self.startCamera)
-        
-        self.get_out = QtWidgets.QPushButton(self)
-        self.get_out.setGeometry(QtCore.QRect(20, 420, 300, 200))
-        font = QtGui.QFont()
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.get_out.setFont(font)
-        self.get_out.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.get_out.setStyleSheet("background-color:rgb(255, 0, 0)")
-        self.get_out.setText("OUT")
-        self.get_out.setObjectName("get_out")
-        self.get_out.clicked.connect(self.stopCamera)
-        
-        self.reset = QtWidgets.QPushButton(self)
-        self.reset.setGeometry(QtCore.QRect(20, 640, 300, 200))
-        font = QtGui.QFont()
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.reset.setFont(font)
-        self.reset.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
-        self.reset.setStyleSheet("background-color:rgb(255, 255, 0)")
-        self.reset.setText("RESET")
-        self.reset.setObjectName("reset")
+        self.eid_textbox = QtWidgets.QLineEdit(self.reg)
+        self.eid_textbox.setGeometry(QtCore.QRect(290, 200, 389, 24))
+        self.eid_textbox.setObjectName("eid_textbox")
+        self.label_5 = QtWidgets.QLabel(self.reg)
+        self.label_5.setGeometry(QtCore.QRect(340, 300, 281, 20))
+        self.label_5.setText("")
+        self.label_5.setObjectName("label_5")
+        self.tabs.addTab(self.reg, "")
 
-    def startCamera(self):
-        self.thread.start()
+        self.setWindowTitle("MainWindow")
+        self.tabs.setToolTip("<html><head/><body><p><br/></p></body></html>")
+        self.label_3.setText("Name")
+        self.label_2.setText("Arrival Time")
+        self.label.setText("Depature Time")
+        self.sign_button.setText("SIGN")
+        self.tabs.setTabText(self.tabs.indexOf(self.recent), "Recent Users")
+        self.save_button.setText("Save")
+        self.generate_button.setText("Generate QR")
+        self.label_4.setText("Employee ID")
+        self.tabs.setTabText(self.tabs.indexOf(self.reg),"Register")
 
-    def stopCamera(self):
-        self.thread.stop()
-    
-    @pyqtSlot(np.ndarray)
-    def update_image(self, cv_img):
-        """Updates the image_label with a new opencv image"""
-        qt_img = self.convert_cv_qt(cv_img)
-        self.display.setPixmap(qt_img)
-    
-    def convert_cv_qt(self, cv_img):
-        """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(800, 640, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
+        self.generate_button.clicked.connect(self.generate)
+        self.eid=None
+        self.code=None
+        self.save_button.clicked.connect(self.save)
+        self.img=None
+
+    def generate(self):
+        self.eid=self.eid_textbox.text()
+        #check valid eid
+        cursor.execute("select * from employee where eid=%s",(self.eid,))
+        result=cursor.fetchall()
+        if len(result)==0:
+            self.label_5.setText("Wrong employee id")
+            return
+        #generate unique security code
+        cursor.execute("select security_code from employee")
+        result=cursor.fetchall()
+        while True:
+            self.code=random.randrange(1111111111,9999999999)
+            if self.code not in result[0]:
+                break 
+        cursor.execute("update employee set security_code=%s where eid=%s",(self.code,self.eid))
+        db.commit()
+        #generate qr code
+        self.img=qrcode.make(self.code)
+        self.label_5.setText("QRCode generated successfully")
+
+    def save(self):
+        #check if generation is successfull
+        if self.img==None:
+            self.label_5.setText("No QRCode found")
+            return
+        #save to device
+        self.img.save(self.eid+".jpg")
+        self.label_5.setText("QRCode saved")
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
