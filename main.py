@@ -1,8 +1,6 @@
 from random import random
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QWidget,QApplication
-from PyQt5.QtCore import QObject
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QWidget,QApplication,QLabel,QHBoxLayout,QListWidgetItem
 import cv2
 import numpy as np
 import mysql.connector
@@ -10,9 +8,29 @@ import sys
 import qrcode
 import random
 from datetime import datetime
+import csv
 
 db = mysql.connector.connect(host="localhost", user="root", passwd="",database="OpenCV")
 cursor = db.cursor()
+
+class CustomQWidget(QWidget):
+    def __init__(self, row):
+        super().__init__()
+        label1 = QLabel(row[0])
+        label2 = QLabel()
+        label3 = QLabel()
+        label1.setAlignment(QtCore.Qt.AlignCenter)
+        label2.setAlignment(QtCore.Qt.AlignCenter)
+        label3.setAlignment(QtCore.Qt.AlignCenter)
+        if row[2]==0:
+            label2.setText(str(row[1]))
+        else:
+            label3.setText(str(row[1]))
+        layout = QHBoxLayout()
+        layout.addWidget(label1)
+        layout.addWidget(label2)
+        layout.addWidget(label3)
+        self.setLayout(layout)
 
 class Ui_MainWindow(QWidget):
     def __init__(self):
@@ -47,6 +65,7 @@ class Ui_MainWindow(QWidget):
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.label.setObjectName("label")
         self.horizontalLayout.addWidget(self.label)
+
         self.sign_button = QtWidgets.QPushButton(self.recent)
         self.sign_button.setGeometry(QtCore.QRect(670, 160, 241, 181))
         font = QtGui.QFont()
@@ -57,6 +76,29 @@ class Ui_MainWindow(QWidget):
         self.sign_button.setStyleSheet("background-color:rgb(238, 238, 238)")
         self.sign_button.setCheckable(False)
         self.sign_button.setObjectName("sign_button")
+
+        self.export_button = QtWidgets.QPushButton(self.recent)
+        self.export_button.setGeometry(QtCore.QRect(670, 351, 241, 50))
+        font = QtGui.QFont()
+        font.setFamily("Bahnschrift Light")
+        font.setPointSize(13)
+        self.export_button.setFont(font)
+        self.export_button.setAutoFillBackground(False)
+        self.export_button.setStyleSheet("background-color:rgb(238, 238, 238)")
+        self.export_button.setCheckable(False)
+        self.export_button.setObjectName("export_button")
+
+        self.reset_button = QtWidgets.QPushButton(self.recent)
+        self.reset_button.setGeometry(QtCore.QRect(670, 411, 241, 50))
+        font = QtGui.QFont()
+        font.setFamily("Bahnschrift Light")
+        font.setPointSize(13)
+        self.reset_button.setFont(font)
+        self.reset_button.setAutoFillBackground(False)
+        self.reset_button.setStyleSheet("background-color:rgb(238, 238, 238)")
+        self.reset_button.setCheckable(False)
+        self.reset_button.setObjectName("reset_button")
+
         self.recent_list = QtWidgets.QListWidget(self.recent)
         self.recent_list.setGeometry(QtCore.QRect(10, 50, 581, 531))
         self.recent_list.setObjectName("recent_list")
@@ -94,11 +136,31 @@ class Ui_MainWindow(QWidget):
         self.label_2.setText("Arrival Time")
         self.label.setText("Depature Time")
         self.sign_button.setText("SIGN")
+        self.export_button.setText("EXPORT")
+        self.reset_button.setText("RESET")
         self.tabs.setTabText(self.tabs.indexOf(self.recent), "Recent Users")
         self.save_button.setText("Save")
         self.generate_button.setText("Generate QR")
         self.label_4.setText("Employee ID")
         self.tabs.setTabText(self.tabs.indexOf(self.reg),"Register")
+        
+        #export
+        self.export_button.clicked.connect(self.export)
+        self.entries=[]
+        
+        #fill the list(recent entries)
+        cursor.execute("select * from register")
+        result=cursor.fetchall()
+        for row in result:
+            item = QListWidgetItem()
+            item_widget = CustomQWidget(row)
+            item.setSizeHint(item_widget.sizeHint())
+            self.recent_list.insertItem(0,item)
+            self.recent_list.setItemWidget(item, item_widget)
+            if row[2]==0:
+                self.entries.insert(0,[row[0],"Arrival",row[1]])
+            else:
+                self.entries.insert(0,[row[0],"Depature",row[1]])
 
         #generation module
         self.generate_button.clicked.connect(self.generate)
@@ -109,7 +171,9 @@ class Ui_MainWindow(QWidget):
 
         #registration module
         self.sign_button.clicked.connect(self.sign)
-        
+
+        #reset
+        self.reset_button.clicked.connect(self.reset)
 
     def generate(self):
         self.eid=self.eid_textbox.text()
@@ -158,7 +222,7 @@ class Ui_MainWindow(QWidget):
             if key==ord('x'):
                 break
         self.video.release()
-        #register entry/exit        
+        #register entry/exit       
         self.register()
         cv2.destroyAllWindows()
 
@@ -174,6 +238,8 @@ class Ui_MainWindow(QWidget):
         return True
 
     def register(self):
+        if self.security_code=="":
+            return
         now = datetime.now()
         current_time = now.strftime("%H:%M:%S")
         cursor.execute("select eid,name from employee where security_code=%s",(self.security_code,))
@@ -185,10 +251,36 @@ class Ui_MainWindow(QWidget):
         if len(result)==0:
             cursor.execute("insert into register values(%s,%s,%s,%s)",(emp_name,current_time,0,emp_id))
             db.commit()
+            row=(emp_name,current_time,0)
+            item = QListWidgetItem()
+            item_widget = CustomQWidget(row)
+            item.setSizeHint(item_widget.sizeHint())
+            self.recent_list.insertItem(0,item)
+            self.recent_list.setItemWidget(item, item_widget)
+            self.entries.insert(0,[emp_name,"Arrival",current_time])
         else:
             cursor.execute("insert into register values(%s,%s,%s,%s)",(emp_name,current_time,1,emp_id))
             db.commit()
+            row=(emp_name,current_time,1)
+            item = QListWidgetItem()
+            item_widget = CustomQWidget(row)
+            item.setSizeHint(item_widget.sizeHint())
+            self.recent_list.insertItem(0,item)
+            self.recent_list.setItemWidget(item, item_widget)
+            self.entries.insert(0,[emp_name,"Depature",current_time])
+        
+    def export(self):
+        fields=['Name','Status','Time']
+        with open('entries.csv', 'w') as f:
+            write = csv.writer(f)    
+            write.writerow(fields)
+            write.writerows(self.entries)
 
+    def reset(self):
+        cursor.execute("delete from register")
+        db.commit()
+        self.recent_list.clear()
+        self.entries=[]
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
